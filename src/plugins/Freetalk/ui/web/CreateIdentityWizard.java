@@ -38,7 +38,7 @@ public class CreateIdentityWizard extends WebPageImpl {
 		super(myWebInterface, null, request, _baseL10n);
 	}
 
-	public void make() {
+	@Override public void make() {
 		makeCreateIdentityBox();
 	}
 
@@ -347,6 +347,8 @@ public class CreateIdentityWizard extends WebPageImpl {
 				myForm.addChild("input",	new String[] { "type", "name", "value" },
 											new String[] { "hidden", "PublishTrustList", mIdentityPublishesTrustList.toString() });
 			}
+			
+			// FIXME TODO: Why don't we add mAutoSubscribe / mDisplayImages?
 		}
 	}
 }

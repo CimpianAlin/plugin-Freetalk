@@ -43,7 +43,7 @@ public class WoTIdentity extends Persistent implements Identity {
 	
 	/**
 	 * Used for garbage collecting old identities which are not returned by the WoT plugin anymore.
-	 * We delete them if they were not received for a certain time interval.
+	 * We delete them if their last fetch ID is different to the fetch ID of the current fetch.
 	 */
 	private long mLastReceivedFromWoT;
 
@@ -64,7 +64,7 @@ public class WoTIdentity extends Persistent implements Identity {
 		mID = myID;
 		mRequestURI = myRequestURI;
 		mNickname = myNickname;
-		mLastReceivedFromWoT = CurrentTimeUTC.getInMillis();
+		mLastReceivedFromWoT = 0;
 		
 		IfNotEquals.thenThrow(IdentityID.construct(mID), IdentityID.constructFromURI(mRequestURI), "myID");
 	}
@@ -90,7 +90,7 @@ public class WoTIdentity extends Persistent implements Identity {
 	}
 	
 
-	public String getID() {
+	@Override public String getID() {
 		checkedActivate(1); // String is a db4o primitive type so 1 is enough
 		return mID;
 	}
@@ -110,13 +110,13 @@ public class WoTIdentity extends Persistent implements Identity {
 		return Base64.encode(uri.getRoutingKey());
 	}
 
-	public FreenetURI getRequestURI() {
+	@Override public FreenetURI getRequestURI() {
 		checkedActivate(1);
 		checkedActivate(mRequestURI, 2);
 		return mRequestURI;
 	}
 
-	public String getNickname() {
+	@Override public String getNickname() {
 		checkedActivate(1); // String is a db4o primitive type so 1 is enough
 		return mNickname;
 	}
@@ -129,11 +129,11 @@ public class WoTIdentity extends Persistent implements Identity {
 		return mNickname;
 	}
 
-	public String getShortestUniqueName() {
+	@Override public String getShortestUniqueName() {
 		return mFreetalk.getIdentityManager().getShortestUniqueName(this);
 	}
 
-	public String getFreetalkAddress() {
+	@Override public String getFreetalkAddress() {
 		checkedActivate(1); // String is a db4o primitive type so 1 is enough
 		return mNickname + "@" + mID + "." + Freetalk.WOT_CONTEXT.toLowerCase();	
 	}
@@ -165,12 +165,11 @@ public class WoTIdentity extends Persistent implements Identity {
 	}
 	
 	/**
-	 * Set the time this identity was last received from the WoT plugin to the given UTC time in milliseconds
-	 * @param time
+	 * Set the ID of the identity fetch in which this identity was last received from the WoT plugin to the given unique ID.
 	 */
-	public synchronized void setLastReceivedFromWoT(long time) {
+	public synchronized void setLastReceivedFromWoT(long fetchID) {
 		checkedActivate(1);
-		mLastReceivedFromWoT = time;
+		mLastReceivedFromWoT = fetchID;
 		storeWithoutCommit(); // TODO: Move store() calls outside of class identity
 	}
 
@@ -195,7 +194,7 @@ public class WoTIdentity extends Persistent implements Identity {
 		if(newNickname.length() > 30) throw new InvalidParameterException("Nickname is too long, the limit is 30 characters.");
 	}
 
-	protected void checkedCommit(Object loggingObject) {
+	@Override protected void checkedCommit(Object loggingObject) {
 		super.checkedCommit(loggingObject);
 	}
 	
@@ -209,7 +208,7 @@ public class WoTIdentity extends Persistent implements Identity {
 		}
 	}
 
-	protected void storeWithoutCommit() {
+	@Override protected void storeWithoutCommit() {
 		try {		
 			// 1 is the maximal depth of all getter functions. You have to adjust this when introducing new member variables.
 			checkedActivate(1);
@@ -224,8 +223,8 @@ public class WoTIdentity extends Persistent implements Identity {
 			checkedRollbackAndThrow(e);
 		}
 	}
-	
-	protected void deleteWithoutCommit() {
+
+	@Override protected void deleteWithoutCommit() {
 		try {
 			// 1 is the maximal depth of all getter functions. You have to adjust this when introducing new member variables.
 			checkedActivate(this, 1);
@@ -240,7 +239,7 @@ public class WoTIdentity extends Persistent implements Identity {
 		}
 	}
 
-	public String toString() {
+	@Override public String toString() {
 		if(mDB != null)
 			return getFreetalkAddress();
 		
